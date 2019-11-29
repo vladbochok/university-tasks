@@ -1,5 +1,5 @@
 import math
-
+ 
 
 def domain(x: float) -> bool:
     """Perform validation of the value range.
