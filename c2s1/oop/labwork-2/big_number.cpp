@@ -21,58 +21,151 @@ BigNumber::BigNumber(long long number, int base) {
             break;
     }
 
-    while (number > 0)
-    {
+    while (number > 0) {
         digits.push_back(number % base);
         number /= base;
     }
 }
 
-BigNumber::BigNumber(std::vector<int> &digits, int base) {
+BigNumber::BigNumber(std::vector<int> &digits, int base) { // TODO: add check for correctness of vector
     this->digits = digits;
     this->base = base;
     this->sign = POSITIVE;
 }
 
-BigNumber::BigNumber(long long number): BigNumber(number, BigNumber::DEFAULT_BASE)  {}
+BigNumber::BigNumber(long long number) : BigNumber(number, BigNumber::DEFAULT_BASE) {}
 
-BigNumber::BigNumber(): BigNumber(0, BigNumber::DEFAULT_BASE)  {}
+BigNumber::BigNumber() : BigNumber(0, BigNumber::DEFAULT_BASE) {}
 
-BigNumber::BigNumber(std::vector<int> &digits) :BigNumber(digits, BigNumber::DEFAULT_BASE)  {}
+BigNumber::BigNumber(std::vector<int> &digits) : BigNumber(digits, BigNumber::DEFAULT_BASE) {}
 
-BigNumber BigNumber::operator + (BigNumber other)
-{
+BigNumber BigNumber::operator+(const BigNumber &Other) {
+    this->add(Other);
+    return *this;
+}
+
+BigNumber BigNumber::operator+=(const BigNumber &Other) {
+    *this = *this + Other;
+    return *this;
+}
+
+BigNumber BigNumber::operator-() {
+    BigNumber result = *this;
+    if (this->sign == POSITIVE) {
+        result.sign = NEGATIVE;
+    } else {
+        result.sign = POSITIVE;
+    }
+
+    return result;
+}
+
+BigNumber BigNumber::operator-(const BigNumber &Other) {
+    this->subtract(Other);
+    return *this;
+}
+
+BigNumber BigNumber::operator-=(const BigNumber &Other) {
+    *this = *this - Other;
+    return *this;
+}
+
+// Karatsuba
+BigNumber BigNumber::operator*(const BigNumber &Other) {
+    this->karatsuba_multiply(Other);
+    return *this;
+}
+
+BigNumber BigNumber::operator*=(const BigNumber &Other) {
+    *this = *this * Other;
+    return *this;
+}
+
+bool BigNumber::operator<(const BigNumber &Other) const {
+    return (*this <= Other) && (*this != Other);
+}
+
+bool BigNumber::operator<=(const BigNumber &Other) const {
+    return *this == Other || !(Other >= *this);
+}
+
+bool BigNumber::operator>(const BigNumber &Other) const {
+    return (*this >= Other) && (*this != Other);
+}
+
+bool BigNumber::operator>=(const BigNumber &Other) const {
+    // basic checks
+    if (this->sign == POSITIVE && Other.sign == NEGATIVE || this->exp() > Other.exp())
+        return true;
+    if (this->sign == NEGATIVE && Other.sign == POSITIVE || this->exp() < Other.exp())
+        return false;
+
+    // per digit comparison
+    for (int i = (int) exp() - 1; i >= 0; --i) {
+        if (digits[i] != Other.digits[i])
+            return digits[i] > Other.digits[i];
+    }
+
+    // equality case
+    return true;
+}
+
+bool BigNumber::operator==(const BigNumber &Other) const {
+    // basic checks
+    if (sign != Other.sign || exp() != Other.exp())
+        return false;
+
+    // per digit comparison
+    for (size_t i = 1; i <= exp(); ++i)
+        if (digits[exp() - i] != Other.digits[exp() - i])
+            return false;
+
+    // equality case
+    return true;
+}
+
+bool BigNumber::operator!=(const BigNumber &Other) const {
+    return !(*this == Other);
+}
+
+void BigNumber::shrink_to_fit() {
+    while (this->exp() > 1 && this->digits.back() == 0)
+        this->digits.pop_back();
+}
+
+int BigNumber::exp() const {
+    return this->digits.size();
+}
+
+BigNumber BigNumber::add(BigNumber Other) {
     BigNumber result;
     // Remove leading zero's.
     this->shrink_to_fit();
-    other.shrink_to_fit();
+    Other.shrink_to_fit();
 
-    if (-other > *this && other.sign < 0)
-    {
-        result = (-other) + (-(*this));
+    if (-Other > *this && Other.sign == NEGATIVE) {
+        result = (-Other).add(-(*this));
         result = -result;
         return result;
     }
 
-    if (-(*this) > other && sign < 0)
-    {
-        result = (-*this) + (-other);
+    if (-(*this) > Other && sign == NEGATIVE) {
+        result = (-*this).add(-Other);
         result = -result;
         return result;
     }
 
+    int max_exp = (int) std::max(this->exp(), Other.exp());
     // add zeros
-    int n = (int)std::max(this->exp(), other.exp());
-    while (exp() != n)
-        digits.push_back(0);
-    while (other.exp() != n)
-        other.digits.push_back(0);
+    while (exp() != max_exp)
+        this->digits.push_back(0);
+    while (Other.exp() != max_exp)
+        Other.digits.push_back(0);
 
-    result.digits = std::vector<int>(1,0);
+    result.digits = std::vector<int>(1, 0);
 
-    for (size_t i = 0; i < n; ++i)
-    {
-        int s = result.digits.back() + digits[i] * sign + other.digits[i] * other.sign;
+    for (size_t i = 0; i < max_exp; ++i) {
+        int s = result.digits.back() + digits[i] * sign + Other.digits[i] * Other.sign;
         result.digits.back() = (s + 2 * base) % base;
         result.digits.push_back((s + 2 * base) / base - 2);
     }
@@ -85,64 +178,34 @@ BigNumber BigNumber::operator + (BigNumber other)
     return result;
 }
 
-BigNumber& BigNumber::operator += (BigNumber& other)
-{
-    *this = *this + other;
+BigNumber BigNumber::subtract(BigNumber Other) {
+    this->add(-Other);
     return *this;
 }
 
-BigNumber& BigNumber::operator - ()
-{
-    if(this->sign == POSITIVE) {
-        result.sign = NEGATIVE;
-    } else {
-        result.sign = POSITIVE;
-    }
-
-    return result;
-}
-
-BigNumber BigNumber::operator - (BigNumber other)
-{
-    return *this + (-other);
-}
-
-BigNumber BigNumber::operator -= (BigNumber other)
-{
-    BigNumber result = *this - other;
-    *this = result;
-    return *this;
-}
-
-// Karatsuba
-BigNumber BigNumber::operator * (BigNumber other)
-{
+BigNumber BigNumber::karatsuba_multiply(BigNumber Other) {
     // Remove leading zero's.
     this->shrink_to_fit();
-    other.shrink_to_fit();
+    Other.shrink_to_fit();
 
-    int n = std::max(exp(), other.exp());
+    int n = std::max(exp(), Other.exp());
 
     // add zeros
     while (exp() != n)
         digits.push_back(0);
-    while (other.exp() != n)
-        other.digits.push_back(0);
+    while (Other.exp() != n)
+        Other.digits.push_back(0);
 
     // base case
-    if (n == 0)
-    {
+    if (n == 0) {
         return BigNumber(0);
     }
 
-    if (n == 1)
-    {
-        BigNumber A(digits[0] * other.digits[0]);
-        if(this->sign == other.sign)
-        {
+    if (n == 1) {
+        BigNumber A(digits[0] * Other.digits[0]);
+        if (this->sign == Other.sign) {
             A.sign = POSITIVE;
-        }
-        else {
+        } else {
             A.sign = NEGATIVE;
         }
         return A;
@@ -151,230 +214,35 @@ BigNumber BigNumber::operator * (BigNumber other)
     // recursive calls
     int m = n / 2;
     std::vector<int> u0, u1, v0, v1;
-    for (int i = 0; i < m; ++i)
-    {
+    for (int i = 0; i < m; ++i) {
         u0.push_back(digits[i]);
-        v0.push_back(other.digits[i]);
+        v0.push_back(Other.digits[i]);
     }
-    for (int i = m; i < n; ++i)
-    {
+    for (int i = m; i < n; ++i) {
         u1.push_back(digits[i]);
-        v1.push_back(other.digits[i]);
+        v1.push_back(Other.digits[i]);
     }
 
     BigNumber U0(u0), U1(u1), V0(v0), V1(v1);
-    U0.sign = sign; U1.sign = sign; V0.sign = other.sign; V1.sign = other.sign;
+    U0.sign = sign;
+    U1.sign = sign;
+    V0.sign = Other.sign;
+    V1.sign = Other.sign;
 
     BigNumber M1 = U1 - U0, M2 = V0 - V1;
 
     BigNumber N1 = U1 * V1, N2 = M1 * M2, N3 = U0 * V0;
 
-    BigNumber A = (N1 << (2 * m)) + (N1 << m) + (N2 << m) + (N3 << m) + N3;
+    BigNumber Result = (N1 << (2 * m)) + (N1 << m) + (N2 << m) + (N3 << m) + N3;
 
     // Change sign and remove leading zero's.
-    A.sign = A.sign == POSITIVE? NEGATIVE: POSITIVE;
-    A.shrink_to_fit();
+    Result.sign = Result.sign == POSITIVE ? NEGATIVE : POSITIVE;
+    Result.shrink_to_fit();
 
-    return A;
+    return Result;
 }
 
-BigNumber& BigNumber::operator *= (BigNumber& other)
-{
-    *this = *this * other;
-    return *this;
-}
-
-BigNumber BigNumber::operator / (long long n)
-{
-    BigNumber result = *this;
-    for (int i = (int)result.exp() - 1; i > 0; --i)
-    {
-        int s = result.digits[i];
-        result.digits[i] /= n;
-        result.digits[i - 1] += base * (s - other * result.digits[i]);
-    }
-    result.digits[0] /= n;
-
-    return result;
-}
-
-BigNumber BigNumber::operator /= (long long n)
-{
-    *this = *this / n;
-    return *this;
-}
-
-BigNumber BigNumber::operator / (BigNumber N)
-{
-    int other = N.exp();
-    lreal T = lreal(*this) >> n;
-    lreal R = lreal(N) >> n;
-    lreal A = T / R;
-    A = strip(A);
-    return BigNumber(A.digits, A.decimal_point);
-}
-
-BigNumber BigNumber::operator /= (BigNumber N)
-{
-    BigNumber result = *this / N;
-    *this = result;
-    return *this;
-}
-
-BigNumber BigNumber::operator % (BigNumber N)
-{
-    return (*this - (*this / N) * N);
-}
-
-BigNumber BigNumber::operator %= (BigNumber N)
-{
-    *this -= (*this / N) * N;
-    return *this;
-}
-
-BigNumber BigNumber::operator % (long long n)
-{
-    return (*this - (*this / n) * n);
-}
-
-BigNumber BigNumber::operator %= (long long n)
-{
-    *this -= (*this / n) * BigNumber(n);
-    return *this;
-}
-
-BigNumber BigNumber::operator << (int n)
-{
-    BigNumber result = *this;
-    for (int i = 0; i < n; ++i)
-        result.digits.insert(result.digits.begin(), 0);
-    return result;
-}
-
-BigNumber BigNumber::operator <<= (int n)
-{
-    *this = *this << n;
-    return *this;
-}
-
-BigNumber BigNumber::operator >> (int n)
-{
-    BigNumber result = *this;
-    for (int i = 0; i < n; ++i)
-        result.digits.erase(result.digits.begin());
-    return result;
-}
-
-BigNumber BigNumber::operator >>= (int n)
-{
-    *this = *this >> n;
-    return *this;
-}
-
-bool BigNumber::operator < (BigNumber N)
-{
-    return (*this <= N) && (*this != N);
-}
-
-bool BigNumber::operator <= (BigNumber N)
-{
-    return *this == other || ! (N >= *this);
-}
-
-bool BigNumber::operator > (BigNumber N)
-{
-    return (*this >= N) && (*this != N);
-}
-
-bool BigNumber::operator >= (BigNumber N)
-{
-    // strip
-    *this = strip(*this);
-    other = strip(N);
-
-    // basic checks
-    if (sign > N.sign)
-        return true;
-    if (sign < N.sign)
-        return false;
-    if (exp() > N.exp())
-        return true;
-    if (exp() < N.exp())
-        return false;
-
-    // per digit comparison
-    for (int i = (int)exp() - 1; i >= 0; --i)
-    {
-        if (digits[i] > N.digits[i])
-            return true;
-        if (digits[i] < N.digits[i])
-            return false;
-    }
-
-    // equality case
-    return true;
-}
-
-bool BigNumber::operator == (BigNumber N)
-{
-    *this = strip(*this);
-    other = strip(N);
-
-    // basic checks
-    if (sign != N.sign)
-        return false;
-    if (exp() != N.exp())
-        return false;
-
-    // per digit comparison
-    for (int i = 1; i <= exp(); ++i)
-        if (digits[exp() - i] != N.digits[exp() - i])
-            return false;
-
-    // equality case
-    return true;
-}
-
-bool BigNumber::operator != (BigNumber N)
-{
-    return !(*this == N);
-}
-
-void BigNumber::shrink_to_fit(BigNumber &) {
-
-}
-
-BigNumber::operator string()
-{
-    BigNumber result = strip(*this);
-
-    string s = "";
-    for (int i = 0; i < result.exp(); ++i)
-        s = (char)(result.digits[i] + 48) + s;
-    if (result.sign == -1)
-        s = '-' + s;
-
-    return s;
-}
-
-BigNumber abs(BigNumber N)
-{
-    BigNumber result = N;
-    result.sign = 1;
-    return result;
-}
-
-BigNumber strip(BigNumber N)
-{
-    BigNumber result = N;
-    while (result.exp() > 1 && result.digits.back() == 0)
-        result.digits.pop_back();
-    return result;
-}
-
-
-ostream& operator << (ostream& out, BigNumber N)
-{
-    out << (string)N;
+std::ostream &operator<<(std::ostream &out, BigNumber Number) {
+    out << (std::string) Number;
     return out;
 }

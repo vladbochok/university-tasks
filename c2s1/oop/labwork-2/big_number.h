@@ -7,54 +7,54 @@
 #define LABWORK_2_BIG_NUMBER_H
 
 #include <vector>
+#include <string>
+#include <iostream>
 
-class BigNumber
-{
-protected:
-    Static const unsigned int DEFAULT_BASE = 2;
-    Static enum Sign {
+class BigNumber {
+public:
+    BigNumber();
+
+    BigNumber(long long); // TODO: maybe explicit?
+    BigNumber(std::vector<int> &); // TODO: maybe explicit?
+
+    BigNumber(long long, int);
+
+    BigNumber(std::vector<int> &, int);
+
+    BigNumber operator+(const BigNumber &);
+    BigNumber operator-(const BigNumber &);
+    BigNumber operator*(const BigNumber &);
+
+    BigNumber operator+=(const BigNumber &);
+    BigNumber operator-=(const BigNumber &);
+    BigNumber operator*=(const BigNumber &);
+
+    BigNumber operator-();
+
+    bool operator<(const BigNumber &) const;
+    bool operator<=(const BigNumber &) const;
+    bool operator>(const BigNumber &) const;
+    bool operator>=(const BigNumber &) const;
+    bool operator==(const BigNumber &) const;
+    bool operator!=(const BigNumber &) const;
+
+private:
+    static const unsigned int DEFAULT_BASE = 2;
+    static enum Sign {
         POSITIVE = 1,
         NEGATIVE = -1
     };
 
-    std::vector <int> digits;
+    BigNumber add(BigNumber);
+    BigNumber subtract(BigNumber);
+    BigNumber karatsuba_multiply(BigNumber);
+
+    std::vector<int> digits; // number represents as vector
     unsigned int base;
     Sign sign;
 
     void shrink_to_fit();
-    void abs();
-    int exp();
-public:
-    BigNumber();
-    BigNumber(long long); // TODO: maybe explicit?
-    BigNumber(long long, int);
-    BigNumber(std::vector<int>&); // TODO: maybe explicit?
-    BigNumber(std::vector<int>&, int);
-
-    BigNumber operator + (BigNumber);
-    BigNumber operator - (BigNumber);
-    BigNumber operator * (BigNumber);
-    BigNumber operator / (BigNumber);
-    BigNumber operator / (long long);
-    BigNumber operator % (BigNumber);
-    BigNumber operator % (long long);
-
-    BigNumber& operator += (BigNumber&);
-    BigNumber& operator -= (BigNumber&);
-    BigNumber& operator *= (BigNumber&);
-    BigNumber operator /= (BigNumber);
-    BigNumber operator /= (long long);
-    BigNumber operator %= (BigNumber);
-    BigNumber operator %= (long long);
-
-    BigNumber operator - ();
-
-    bool operator < (BigNumber);
-    bool operator <= (BigNumber);
-    bool operator > (BigNumber);
-    bool operator >= (BigNumber);
-    bool operator == (BigNumber);
-    bool operator != (BigNumber);
+    int exp() const;
 };
 
 
