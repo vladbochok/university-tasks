@@ -14,10 +14,10 @@ BigNumber::BigNumber(long long number, int base) {
     switch (number_sign) {
         case 1:
             this->sign = POSITIVE;
-            number *= -1;
             break;
         case -1:
             this->sign = NEGATIVE;
+            number *= -1;
             break;
     }
 
@@ -40,8 +40,8 @@ BigNumber::BigNumber() : BigNumber(0, BigNumber::DEFAULT_BASE) {}
 BigNumber::BigNumber(std::vector<int> &digits) : BigNumber(digits, BigNumber::DEFAULT_BASE) {}
 
 BigNumber BigNumber::operator+(const BigNumber &Other) {
-    this->add(Other);
-    return *this;
+    BigNumber Result = this->add(Other);
+    return Result;
 }
 
 BigNumber BigNumber::operator+=(const BigNumber &Other) {
@@ -61,8 +61,8 @@ BigNumber BigNumber::operator-() {
 }
 
 BigNumber BigNumber::operator-(const BigNumber &Other) {
-    this->subtract(Other);
-    return *this;
+    BigNumber Result = this->subtract(Other);
+    return Result;
 }
 
 BigNumber BigNumber::operator-=(const BigNumber &Other) {
@@ -72,8 +72,8 @@ BigNumber BigNumber::operator-=(const BigNumber &Other) {
 
 // Karatsuba
 BigNumber BigNumber::operator*(const BigNumber &Other) {
-    this->karatsuba_multiply(Other);
-    return *this;
+    BigNumber Result = this->karatsuba_multiply(Other);
+    return Result;
 }
 
 BigNumber BigNumber::operator*=(const BigNumber &Other) {
@@ -179,8 +179,8 @@ BigNumber BigNumber::add(BigNumber Other) {
 }
 
 BigNumber BigNumber::subtract(BigNumber Other) {
-    this->add(-Other);
-    return *this;
+    BigNumber Result = this->add(-Other);
+    return Result;
 }
 
 BigNumber BigNumber::karatsuba_multiply(BigNumber Other) {
@@ -236,10 +236,33 @@ BigNumber BigNumber::karatsuba_multiply(BigNumber Other) {
     BigNumber Result = (N1 << (2 * m)) + (N1 << m) + (N2 << m) + (N3 << m) + N3;
 
     // Change sign and remove leading zero's.
-    Result.sign = Result.sign == POSITIVE ? NEGATIVE : POSITIVE;
+    Result.sign = sign == Other.sign ? POSITIVE : NEGATIVE;
     Result.shrink_to_fit();
 
     return Result;
+}
+
+BigNumber BigNumber::operator << (int n)
+{
+    BigNumber New = *this;
+    for (int i = 0; i < n; ++i)
+        New.digits.insert(New.digits.begin(), 0);
+    return New;
+}
+
+BigNumber::operator std::string()
+{
+    BigNumber New = *this;
+    New.shrink_to_fit();
+
+    std::string s;
+    if (New.sign == NEGATIVE)
+        s = "-";
+
+    for (int i = New.exp() - 1; i >= 0; --i)
+        s+= (char)(New.digits[i] + 48);
+
+    return s;
 }
 
 std::ostream &operator<<(std::ostream &out, BigNumber Number) {

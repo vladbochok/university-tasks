@@ -30,6 +30,7 @@ public:
     BigNumber operator*=(const BigNumber &);
 
     BigNumber operator-();
+    BigNumber operator<< (int);
 
     bool operator<(const BigNumber &) const;
     bool operator<=(const BigNumber &) const;
@@ -38,9 +39,12 @@ public:
     bool operator==(const BigNumber &) const;
     bool operator!=(const BigNumber &) const;
 
+    operator std::string();
+    friend std::ostream& operator << (std::ostream&, BigNumber);
+
 private:
-    static const unsigned int DEFAULT_BASE = 2;
-    static enum Sign {
+    static const unsigned int DEFAULT_BASE = 10;
+    enum Sign {
         POSITIVE = 1,
         NEGATIVE = -1
     };
@@ -48,6 +52,7 @@ private:
     BigNumber add(BigNumber);
     BigNumber subtract(BigNumber);
     BigNumber karatsuba_multiply(BigNumber);
+    BigNumber Toom_Cook(BigNumber, int);
 
     std::vector<int> digits; // number represents as vector
     unsigned int base;
