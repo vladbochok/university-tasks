@@ -1,0 +1,50 @@
+push 5
+push 3
+push 2
+inv
+pop R1
+push 1
+pop R2
+push 1
+pop R3
+push 2
+push R2
+push 9
+mul
+push R2
+push R0
+mul
+push 7
+push R1
+add
+push R1
+push R1
+mul
+push R3
+push 2
+push R2
+mul
+push R3
+div
+push 5
+push 12
+add
+push 3
+push 4
+push 8
+add
+push R1
+push 5
+push R3
+push R2
+mul
+push R3
+push R2
+mul
+push R3
+mul
+push -2
+push -4
+add
+div
+pop R0
